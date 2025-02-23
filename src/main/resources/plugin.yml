@@ -1,4 +1,12 @@
 name: sandworm
 version: '1.0-SNAPSHOT'
-main: de.ghost.sandworm.Sandworm
+main: de.ghost.sandworm.SandWormPlugin
 api-version: '1.21'
+
+commands:
+  spawnsandworm:
+    description: Spawns a Sand Worm entity.
+    usage: /spawnsandworm
+  killsandworm:
+    description: Kills all Sand Worm entities.
+    usage: /killsandworm
