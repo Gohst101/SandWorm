@@ -1,0 +1,4 @@
+name: sandworm
+version: '1.0-SNAPSHOT'
+main: de.ghost.sandworm.Sandworm
+api-version: '1.21'
