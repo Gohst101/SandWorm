@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.apache.commons.lang3.BitField;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -41,13 +42,25 @@ public class SandWormPlugin extends JavaPlugin implements Listener {
         getLogger().info("Sand Worm Plugin Disabled!");
     }
 
-    // Custom spawn method
+
     public void spawnSandWorm(Location location) {
         World world = location.getWorld();
         if (world == null) return;
 
+
+/*
+        Location location01 = new Location(Bukkit.getWorld("world"), 100, 65, 200);
+        World world01 = location01.getWorld();
+        world01.spawnEntity(location, EntityType.ZOMBIE);
+*/
+
+
+        // Coordinaten des Spielers
+        Location initialLocation;
+        initialLocation = location.clone().add(0, 0, 0);
+
         // Verwende einen Zombie als Basis
-        Mob sandWorm = (Mob) world.spawnEntity(location, EntityType.ZOMBIE);
+        Mob sandWorm = (Mob) world.spawnEntity(initialLocation, EntityType.ZOMBIE);
         sandWorm.setCustomName("Sand Worm");
         sandWorm.setCustomNameVisible(true);
         sandWorm.getAttribute(Attribute.MAX_HEALTH).setBaseValue(200.0);
@@ -58,6 +71,7 @@ public class SandWormPlugin extends JavaPlugin implements Listener {
         // Unterdrücke alle Geräusche
         sandWorm.setSilent(true);
 
+
         // Füge den Tag "sandworm" zur Identifikation hinzu
         sandWorm.addScoreboardTag("sandworm");
 
@@ -67,6 +81,11 @@ public class SandWormPlugin extends JavaPlugin implements Listener {
             zombie.setBaby(false);                     // Nur große Zombies
             zombie.setRemoveWhenFarAway(false);          // Nicht despawnen, wenn der Chunk entladen wird
         }
+
+        // Hole Coordinaten vom Sandwurm - Coordinate Y
+        double normalHeight = sandWorm.getLocation().getY();
+        Bukkit.broadcastMessage("Sand Worm spawn Y-Koordinate: " + normalHeight);
+        double underGroundHeight = normalHeight - 10;
 
         // Erstelle eine gelbe Bossbar für diesen Sand Worm
         BossBar bossBar = Bukkit.createBossBar("Sand Worm Health", BarColor.YELLOW, BarStyle.SOLID);
@@ -117,11 +136,15 @@ public class SandWormPlugin extends JavaPlugin implements Listener {
                     this.cancel();
                     return;
                 }
-                Location currentLoc = sandWorm.getLocation();
-                Location targetLoc = currentTarget[0];
 
-                // Behalte die Y-Koordinate bei und ändere nur X und Z
+                // Change Code from here
+
+                Location currentLoc = sandWorm.getLocation();
+                Location targetLoc = currentTarget[0].clone();  // Clone des Zielortes
+
+                // Hier den Y-Wert angleichen, damit nur X und Z berücksichtigt werden:
                 targetLoc.setY(currentLoc.getY());
+
 
                 double distance = currentLoc.distance(targetLoc);
                 if (distance > 0.5) {
@@ -138,12 +161,16 @@ public class SandWormPlugin extends JavaPlugin implements Listener {
 
                     // Generiere eine neue zufällige Y-Koordinate (entweder ~-20 oder ~)
                     int randomLocationType = ThreadLocalRandom.current().nextInt(0, 100);
-                    if (randomLocationType < 10) { // 10% Chance unter dem Boden (~-20)
-                        sandWorm.teleport(currentLoc.clone().add(0, -20, 0));
-                        Bukkit.broadcastMessage("[DEBUG] Sand Worm teleportiert sich unter den Boden: Y = -20");
-                    } else { // 90% Chance auf normale Höhe (~)
-                        sandWorm.teleport(currentLoc.clone());
-                        Bukkit.broadcastMessage("[DEBUG] Sand Worm bleibt auf normaler Höhe.");
+                    if (randomLocationType < 20) { // 20% Chance unter dem Boden (~-20)
+                        Location newLocation = currentLoc.clone();
+                        newLocation.setY(underGroundHeight); // unterGroundHeight sollte z. B. -20 sein
+                        sandWorm.teleport(newLocation);
+                        Bukkit.broadcastMessage("[DEBUG] Sand Worm teleportiert sich unter den Boden: Y = " + underGroundHeight);
+                    } else { // 80% Chance auf normale Höhe (~)
+                        Location newLocation = currentLoc.clone();
+                        newLocation.setY(normalHeight); // normalHeight könnte z. B. 236 sein
+                        sandWorm.teleport(newLocation);
+                        Bukkit.broadcastMessage("[DEBUG] Sand Worm bleibt auf normaler Höhe: Y = " + normalHeight);
                     }
 
                     // Wähle ein neues Ziel aus der Liste
@@ -151,31 +178,13 @@ public class SandWormPlugin extends JavaPlugin implements Listener {
                     currentTarget[0] = targetPositions.get(randomIndex);
                     Bukkit.broadcastMessage("[DEBUG] Sand Worm: Neuer Zielpunkt ausgewählt: Index "
                             + randomIndex + " -> " + currentTarget[0].toVector().toString());
+
+
+
+                    // To here
                 }
             }
         }.runTaskTimer(this, 0, 1);
-
-        // Setze eine zufällige Anfangshöhe für den Sand Worm (Unter dem Boden oder Normalhöhe)
-        int randomLocationType = ThreadLocalRandom.current().nextInt(0, 100);
-        if (randomLocationType < 20) { // 10% Chance unter dem Boden (~-20)
-            sandWorm.teleport(location.clone().add(0, -20, 0));
-            Bukkit.broadcastMessage("[DEBUG] Sand Worm teleportiert sich unter den Boden: Y = -20");
-        } else { // 90% Chance auf normale Höhe (~)
-            sandWorm.teleport(location.clone().add(0, 20, 0));
-            Bukkit.broadcastMessage("[DEBUG] Sand Worm bleibt auf normaler Höhe.");
-        }
-    }
-
-
-    // Verhindert Sonnenschaden (Feuer/Fire Tick) für Sand Worms
-    @EventHandler
-    public void onEntityDamage(EntityDamageEvent event) {
-        Entity entity = event.getEntity();
-        if (entity.getScoreboardTags().contains("sandworm")) {
-            if (event.getCause() == DamageCause.FIRE || event.getCause() == DamageCause.FIRE_TICK) {
-                event.setCancelled(true);
-            }
-        }
     }
 
     // Command Handling
